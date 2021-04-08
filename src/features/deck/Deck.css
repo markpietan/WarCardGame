@@ -1,0 +1,31 @@
+.player {
+  width: 100%;
+  height: 50vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid black;
+}
+
+.play_area {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.imgContainer {
+  width: 60%;
+}
+
+.imgContainer img {
+  width: 100%;
+}
+
+.pileArea,
+.capturedArea {
+  width: 25%;
+}
+
+.unclickable {
+  opacity: 0.2;
+}
