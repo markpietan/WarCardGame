@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { startGame, startWar } from "./features/deck/deckSlice";
 import { Counter } from "./features/counter/Counter";
 import "./App.css";
-import Loader from "./loader"
+import Loader from "./loader";
 import Deck from "./features/deck/Deck";
+import GameOverScreen from "./GameOverScreen";
 
 function App() {
   const dispatch = useDispatch();
@@ -25,13 +26,10 @@ function App() {
       {gameState.player1.deckId === "" ? null : (
         <h4>Deck ID:{gameState.player1.deckId}</h4>
       )}
-      {/* <button onClick={() => {
-        dispatch(startWar());
-      }
-      }>Play</button> */}
+      <GameOverScreen></GameOverScreen>
       <section className="Split_Screen">
-        <Deck playerName= "player1"></Deck>
-        <Deck playerName= "player2"></Deck>
+        <Deck playerName="player1"></Deck>
+        <Deck playerName="player2"></Deck>
       </section>
     </main>
   );

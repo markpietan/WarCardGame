@@ -74,34 +74,43 @@ export const refreshPile = createAsyncThunk("REFRESH", async (_, thunkAPI) => {
     pileName: p2PileName,
   } = state.gameState.player2;
   const payload = {
+    gameOver: "",
     player1: { captures: p1Captures, pileRemaining: p1PileRemaining },
     player2: { captures: p2Captures, pileRemaining: p2PileRemaining },
   };
-  if (p1PileRemaining === 20) {
-    let codeArray = p1Captures.map((card) => {
-      return card.code;
-    });
-    let codeString = codeArray.toString();
-    const response = await deckOfCardsApi.get(
-      `${deckId}/pile/${p1PileName}/add`,
-      { params: { cards: codeString } }
-    );
-    console.log(codeString);
-    payload.player1.captures = [];
-    payload.player1.pileRemaining = p1Captures.length;
+  if (p1PileRemaining === 0) {
+    if (p1Captures.length <= 0) {
+      payload.gameOver = "player1";
+    } else {
+      let codeArray = p1Captures.map((card) => {
+        return card.code;
+      });
+      let codeString = codeArray.toString();
+      const response = await deckOfCardsApi.get(
+        `${deckId}/pile/${p1PileName}/add`,
+        { params: { cards: codeString } }
+      );
+      console.log(codeString);
+      payload.player1.captures = [];
+      payload.player1.pileRemaining = p1Captures.length;
+    }
   }
-  if (p2PileRemaining === 20) {
-    let codeArray = p2Captures.map((card) => {
-      return card.code;
-    });
-    let codeString = codeArray.toString();
-    const response = await deckOfCardsApi.get(
-      `${deckId}/pile/${p2PileName}/add`,
-      { params: { cards: codeString } }
-    );
-    console.log(codeString);
-    payload.player2.captures = [];
-    payload.player2.pileRemaining = p2Captures.length;
+  if (p2PileRemaining === 0) {
+    if (p2Captures.length <= 0) {
+      payload.gameOver = "player2";
+    } else {
+      let codeArray = p2Captures.map((card) => {
+        return card.code;
+      });
+      let codeString = codeArray.toString();
+      const response = await deckOfCardsApi.get(
+        `${deckId}/pile/${p2PileName}/add`,
+        { params: { cards: codeString } }
+      );
+      console.log(codeString);
+      payload.player2.captures = [];
+      payload.player2.pileRemaining = p2Captures.length;
+    }
   }
   console.log(payload);
   return payload;
@@ -167,6 +176,62 @@ export const startGame = createAsyncThunk("START_GAME", async (_, thunkAPI) => {
   const payload = {
     deckId,
     pileRemaining: 26,
+    gameOver: "",
+  };
+  return payload;
+});
+
+export const startTie = createAsyncThunk("START_TIE", async (_, thunkAPI) => {
+  const state = thunkAPI.getState();
+  console.log(state);
+  const deckId = state.gameState.player1.deckId;
+  const p1PileName = state.gameState.player1.pileName;
+  const p1Draw = await deckOfCardsApi.get(`${deckId}/pile/${p1PileName}/draw`, {
+    params: { count: 1 },
+  });
+  console.log(p1Draw.data);
+  const p2PileName = state.gameState.player2.pileName;
+  const p2Draw = await deckOfCardsApi.get(`${deckId}/pile/${p2PileName}/draw`, {
+    params: { count: 1 },
+  });
+  console.log(p2Draw.data);
+  const [p1Card] = p1Draw.data.cards;
+  const [p2Card] = p2Draw.data.cards;
+  let p1Remaining = state.gameState.player1.pileRemaining;
+  p1Remaining--;
+  let p2Remaining = state.gameState.player2.pileRemaining;
+  p2Remaining--;
+  if (p1Remaining === 0) {
+    thunkAPI.dispatch(refreshPile());
+  }
+  if (p2Remaining === 0) {
+    thunkAPI.dispatch(refreshPile());
+  }
+  const payload = {
+    player1: {
+      warWager: [
+        ...state.gameState.player1.warWager,
+        p1Card,
+        state.gameState.player1.lastDrawn,
+      ],
+      pileRemaining: p1Remaining,
+
+      lastDrawn: null,
+      turnWinner: undefined,
+    },
+
+    player2: {
+      warWager: [
+        ...state.gameState.player2.warWager,
+        p2Card,
+        state.gameState.player2.lastDrawn,
+      ],
+      pileRemaining: p2Remaining,
+
+      lastDrawn: null,
+      turnWinner: undefined,
+    },
+    turnTie: false,
   };
   return payload;
 });
@@ -204,11 +269,13 @@ export const deckSlice = createSlice({
     },
     loaderVisible: false,
     turnTie: false,
+    gameOver: "",
   },
   reducers: {},
   extraReducers: {
     [startGame.fulfilled]: (prevstate, action) => {
       console.log(action);
+      prevstate.gameOver = action.payload.gameOver;
       prevstate.player1.capturedCount = 0;
       prevstate.player2.capturedCount = 0;
       prevstate.loaderVisible = false;
@@ -229,6 +296,7 @@ export const deckSlice = createSlice({
     },
 
     [refreshPile.fulfilled]: (prevstate, action) => {
+      prevstate.gameOver = action.payload.gameOver;
       prevstate.player1.captures = action.payload.player1.captures;
       prevstate.player2.captures = action.payload.player2.captures;
       prevstate.player1.pileRemaining = action.payload.player1.pileRemaining;
@@ -236,9 +304,19 @@ export const deckSlice = createSlice({
       prevstate.loaderVisible = false;
     },
 
+    [startTie.pending]: (prevstate, action) => {
+      prevstate.loaderVisible = true;
+    },
+    [startTie.fulfilled]: (prevstate, action) => {
+      prevstate.loaderVisible = false;
+      const { player1, player2 } = action.payload;
+      prevstate.player1 = { ...prevstate.player1, ...player1 };
+      prevstate.player2 = { ...prevstate.player2, ...player2 };
+    },
+
     [startWar.fulfilled]: (prevstate, action) => {
       console.log(action);
-  
+
       prevstate.player1.pileRemaining = action.payload.player1.pileRemaining;
       prevstate.player2.pileRemaining = action.payload.player2.pileRemaining;
       prevstate.player1.lastDrawn = action.payload.player1.lastDrawn;
@@ -251,16 +329,21 @@ export const deckSlice = createSlice({
         if (action.payload.player1.turnWinner) {
           prevstate.player1.captures.push(
             action.payload.player1.lastDrawn,
-            action.payload.player2.lastDrawn
+            action.payload.player2.lastDrawn,
+            ...prevstate.player1.warWager,
+            ...prevstate.player2.warWager
           );
         } else {
           prevstate.player2.captures.push(
             action.payload.player1.lastDrawn,
-            action.payload.player2.lastDrawn
+            action.payload.player2.lastDrawn,
+            ...prevstate.player1.warWager,
+            ...prevstate.player2.warWager
           );
         }
+        prevstate.player1.warWager = [];
+        prevstate.player2.warWager = [];
       }
-      
     },
   },
 });

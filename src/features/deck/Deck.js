@@ -1,9 +1,9 @@
 import { useSelector, useDispatch } from "react-redux";
 import "./Deck.css";
-import Loader from "../../loader"
-import { startWar, refreshPile } from "./deckSlice";
+import Loader from "../../loader";
+import { startWar, refreshPile, startTie } from "./deckSlice";
 const cardBackUrl =
-  "https://img.favpng.com/12/6/0/bicycle-playing-cards-0-card-game-united-states-playing-card-company-png-favpng-CwU9RVUybHvM4c4dJMafDfqQW.jpg";
+  "https://i.pinimg.com/originals/97/8e/84/978e847bb6d1995e3b3a74744d8be05d.png";
 const Deck = ({ playerName }) => {
   const dispatch = useDispatch();
   const gameState = useSelector((state) => {
@@ -12,7 +12,7 @@ const Deck = ({ playerName }) => {
   return (
     <section className="player">
       <h1>{playerName}</h1>
-     {gameState.turnTie === true ?  <h2>Starting War</h2> : null}
+      {gameState.turnTie === true ? <h2>Starting War</h2> : null}
       <div className="play_area">
         <div className="pileArea">
           {gameState[playerName].deckId === "" ? (
@@ -33,22 +33,20 @@ const Deck = ({ playerName }) => {
                 gameState.player2.pileRemaining === 0
               ) {
                 await dispatch(refreshPile());
+              
               }
-              if (gameState.player1.turnTie) {
-                // await dispatch(startTie())
-              }
-               else {
+              if (gameState.turnTie) {
+                await dispatch(startTie())
+                await dispatch(startWar())
+              } else {
                 const resolve = await dispatch(startWar());
-                console.log({resolve})
+                console.log({ resolve });
               }
             }}
-            className="imgContainer"
+            // className="imgContainer"
+            className={gameState[playerName].deckId && !gameState.loaderVisible ? "imgContainer" : "unclickable imgContainer"}
           >
-            <img
-              disabled = {gameState[playerName].deckId? false: true}
-              className={gameState[playerName].deckId ? "" : "unclickable"}
-              src={cardBackUrl}
-            ></img>
+            <img src={cardBackUrl}></img>
           </div>
         </div>
         <div className="currentCard">
@@ -70,7 +68,7 @@ const Deck = ({ playerName }) => {
           )}
           <div className="imgContainer">
             <img
-              disabled = {gameState[playerName].deckId? false: true}
+              disabled={gameState[playerName].deckId ? false : true}
               className={gameState[playerName].deckId ? "" : "unclickable"}
               src={cardBackUrl}
             ></img>
